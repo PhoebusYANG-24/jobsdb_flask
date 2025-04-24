@@ -7,7 +7,6 @@ app = create_app()
 
 def create_test_data():
     with app.app_context():
-        # 创建管理员用户
         admin = User(
             username='admin',
             email='admin@example.com',
@@ -15,8 +14,7 @@ def create_test_data():
             role=Role.ADMIN
         )
         db.session.add(admin)
-        
-        # 创建普通用户
+
         users = []
         for i in range(1, 6):
             user = User(
@@ -30,7 +28,7 @@ def create_test_data():
         db.session.commit()
         print("Created admin and 5 regular users.")
         
-        # 创建职位
+
         job_titles = [
             "Software Engineer", "Web Developer", "Data Analyst", 
             "Product Manager", "UI/UX Designer", "Marketing Specialist",
@@ -65,8 +63,7 @@ def create_test_data():
             
         db.session.commit()
         print("Created 10 job postings.")
-        
-        # 创建用户简历
+
         education_levels = ["High School", "Associate's Degree", "Bachelor's Degree", "Master's Degree", "PhD"]
         
         for user in users:
@@ -85,11 +82,10 @@ def create_test_data():
         db.session.commit()
         print("Created resumes for all regular users.")
         
-        # 创建工作申请
+
         statuses = ["Pending", "Reviewed", "Rejected", "Accepted"]
         
         for user in users:
-            # 每个用户申请2-4个工作
             user_resume = Resume.query.filter_by(user_id=user.id).first()
             job_count = random.randint(2, 4)
             selected_jobs = random.sample(jobs, job_count)

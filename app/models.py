@@ -15,7 +15,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, index=True)
     email = db.Column(db.String(120), unique=True, index=True)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(512))
     role = db.Column(db.String(10), default=Role.USER)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -61,7 +61,7 @@ class Job(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text(65535), nullable=False)
     requirements = db.Column(db.Text, nullable=False)
     location = db.Column(db.String(100), nullable=False)
     salary = db.Column(db.String(50), nullable=False)
@@ -88,7 +88,7 @@ class Resume(db.Model):
     education = db.Column(db.String(100), nullable=False)
     contact = db.Column(db.String(100), nullable=False)
     experience = db.Column(db.Text, nullable=False)
-    introduction = db.Column(db.Text, nullable=False)
+    introduction = db.Column(db.Text(16777215), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -106,7 +106,8 @@ class Application(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     job_id = db.Column(db.Integer, db.ForeignKey('jobs.id'), nullable=False)
     resume_id = db.Column(db.Integer, db.ForeignKey('resumes.id'), nullable=False)
-    status = db.Column(db.String(20), default='Pending')  # Pending, Reviewed, Rejected, Accepted
+    status = db.Column(db.Enum('Pending', 'Reviewed', 'Accepted', 'Rejected', name='application_status'), 
+                      default='Pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

@@ -732,4 +732,70 @@ footer a:hover {
 .category-icon {
     width: 80px;
     height: 80px;
+}
+
+/* 防止模态框闪烁的CSS */
+.modal {
+    z-index: 1050; /* 确保模态框在最上层 */
+}
+
+.modal-backdrop {
+    z-index: 1040;
+}
+
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out, opacity 0.3s;
+    transform: translateY(-50px);
+    opacity: 0;
+}
+
+.modal.show .modal-dialog {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* 用户模态框样式 */
+.user-details .user-avatar i {
+    opacity: 0.8;
+}
+
+.user-details h6 {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.user-details .lead {
+    font-size: 1.1rem;
+}
+
+/* 优化模态框效果 */
+.modal-content {
+    border: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+/* 减少模态框闪烁 */
+.modal.fade {
+    transition-duration: 0.15s;
+}
+
+/* 确保模态框背景严格覆盖 */
+.modal-backdrop.show {
+    opacity: 0.5;
+}
+
+/* 添加模态框预加载状态 */
+.modal-preload {
+    visibility: hidden;
+    position: fixed;
+    z-index: -1;
+    opacity: 0;
 } 

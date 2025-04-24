@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models import User, Job, Resume, Application, Role
@@ -53,7 +53,7 @@ def job_details(job_id):
     """View details of a specific job"""
     job = Job.query.get_or_404(job_id)
     
-    # 获取相似职位（基于相同位置或相似标题）
+
     similar_jobs = Job.query.filter(
         (Job.location == job.location) | 
         (Job.title.like(f'%{job.title.split()[0]}%')),
@@ -222,12 +222,12 @@ def edit_profile():
     form = EditProfileForm(obj=current_user)
     
     if form.validate_on_submit():
-        # 检查用户名是否已被使用
+
         if form.username.data != current_user.username and User.query.filter_by(username=form.username.data).first():
             flash('This username is already taken.')
             return render_template('user/edit_profile.html', form=form)
         
-        # 更新用户信息
+
         current_user.username = form.username.data
         current_user.email = form.email.data
         db.session.commit()
@@ -244,12 +244,12 @@ def change_password():
     form = ChangePasswordForm()
     
     if form.validate_on_submit():
-        # 验证当前密码
+
         if not current_user.check_password(form.current_password.data):
             flash('Current password is incorrect.')
             return render_template('user/change_password.html', form=form)
         
-        # 更新密码
+
         current_user.set_password(form.new_password.data)
         db.session.commit()
         
@@ -267,14 +267,13 @@ def dashboard():
         flash('Access denied. Admin privileges required.')
         return redirect(url_for('main.index'))
     
-    # 获取基本统计数据
+
     job_count = Job.query.count()
     user_count = User.query.count()
     application_count = Application.query.count()
     accepted_count = Application.query.filter_by(status='Accepted').count()
     
-    # 获取图表数据
-    # 申请趋势数据 - 近30天的申请数量
+
     application_data = []
     for i in range(7, 0, -1):
         date = datetime.utcnow() - timedelta(days=i*5)
@@ -284,14 +283,13 @@ def dashboard():
         ).count()
         application_data.append(count)
     
-    # 状态分布数据
+
     pending_count = Application.query.filter_by(status='Pending').count()
     reviewed_count = Application.query.filter_by(status='Reviewed').count()
     rejected_count = Application.query.filter_by(status='Rejected').count()
     
     status_data = [pending_count, reviewed_count, rejected_count, accepted_count]
-    
-    # 获取最近的职位发布
+
     recent_jobs = Job.query.order_by(Job.created_at.desc()).limit(5).all()
     
     return render_template(
@@ -430,10 +428,11 @@ def manage_users():
         flash('Access denied. Admin privileges required.')
         return redirect(url_for('main.index'))
     
+    from app.models import Application
+    
     page = request.args.get('page', 1, type=int)
     per_page = 10
-    
-    # 处理搜索查询
+
     search_query = request.args.get('search', '')
     if search_query:
         users = User.query.filter(
@@ -448,7 +447,7 @@ def manage_users():
     pagination = users.paginate(page=page, per_page=per_page)
     users = pagination.items
     
-    return render_template('admin/users.html', users=users, pagination=pagination)
+    return render_template('admin/users.html', users=users, pagination=pagination, Application=Application)
 
 @admin_bp.route('/users/delete/<int:user_id>', methods=['POST'])
 @login_required
@@ -459,23 +458,19 @@ def delete_user(user_id):
         return redirect(url_for('main.index'))
     
     user = User.query.get_or_404(user_id)
-    
-    # 不允许删除自己
+
     if user.id == current_user.id:
-        flash('您不能删除自己的账户。')
+        flash('You cannot delete yourself.')
         return redirect(url_for('admin.manage_users'))
-    
-    # 删除用户的申请
+
     Application.query.filter_by(user_id=user_id).delete()
-    
-    # 删除用户的简历
+
     Resume.query.filter_by(user_id=user_id).delete()
-    
-    # 删除用户
+
     db.session.delete(user)
     db.session.commit()
     
-    flash(f'用户 {user.username} 已成功删除。')
+    flash(f'User {user.username} has been deleted. ')
     return redirect(url_for('admin.manage_users'))
 
 @admin_bp.route('/users/toggle-role/<int:user_id>', methods=['POST'])
@@ -487,18 +482,43 @@ def toggle_role(user_id):
         return redirect(url_for('main.index'))
     
     user = User.query.get_or_404(user_id)
-    
-    # 不允许修改自己的角色
+
     if user.id == current_user.id:
-        flash('您不能修改自己的角色。')
+        flash('You cannot change your own role.')
         return redirect(url_for('admin.manage_users'))
     
     if user.role == Role.USER:
         user.role = Role.ADMIN
-        flash(f'用户 {user.username} 已提升为管理员。')
+        flash(f'User {user.username} has been promoted to admin.')
     else:
         user.role = Role.USER
-        flash(f'管理员 {user.username} 已降级为普通用户。')
+        flash(f'Admin {user.username} has been demoted to user.')
     
     db.session.commit()
-    return redirect(url_for('admin.manage_users')) 
+    return redirect(url_for('admin.manage_users'))
+
+@admin_bp.route('/user/<int:user_id>/applications')
+@login_required
+def user_applications(user_id):
+    """API endpoint to get a user's applications"""
+    if not current_user.is_admin():
+        return jsonify({'error': 'Unauthorized access'}), 403
+    
+    user = User.query.get_or_404(user_id)
+    applications = []
+    
+    for app in user.applications.order_by(Application.created_at.desc()).limit(5).all():
+        job = Job.query.get(app.job_id)
+        if job:
+            applications.append({
+                'id': app.id,
+                'job_id': app.job_id,
+                'job_title': job.title,
+                'status': app.status,
+                'created_at': app.created_at.strftime('%Y-%m-%d')
+            })
+    
+    return jsonify({
+        'user_id': user.id,
+        'applications': applications
+    }) 

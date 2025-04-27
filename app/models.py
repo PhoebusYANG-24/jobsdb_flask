@@ -65,7 +65,7 @@ class Company(db.Model):
     website = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Related positions
-    jobs = db.relationship('Job', backref='company', lazy='dynamic')
+    jobs = db.relationship('Job', backref='employer', lazy='dynamic')
 
     def __repr__(self):
         return f'<Company {self.name}>'
@@ -110,7 +110,7 @@ class Job(db.Model):
     posted_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     
     # Relationships
-    applications = db.relationship('Application', backref='job', lazy='dynamic')
+    applications = db.relationship('Application', backref='job_list', lazy='dynamic')
     poster_user = db.relationship('User', foreign_keys=[posted_by], backref='posted_jobs')
     
     def __repr__(self):
